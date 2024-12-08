@@ -9,29 +9,29 @@ import (
 
 type Exchange struct {
 	sync.RWMutex
-	orders map[string]DutchOrder
+	orders map[string]ExclusiveDutchOrder
 }
 
 func NewExchange() *Exchange {
 	return &Exchange{
-		orders: make(map[string]DutchOrder),
+		orders: make(map[string]ExclusiveDutchOrder),
 	}
 }
 
-func (ex *Exchange) ListOrders(ctx context.Context) (map[string]DutchOrder, error) {
+func (ex *Exchange) ListOrders(ctx context.Context) (map[string]ExclusiveDutchOrder, error) {
 	return ex.orders, nil
 }
 
-func (ex *Exchange) CreateOrder(ctx context.Context, id string, dto dto.CreateOrder) (DutchOrder, error) {
+func (ex *Exchange) CreateOrder(ctx context.Context, id string, dto dto.CreateOrder) (ExclusiveDutchOrder, error) {
 	ex.Lock()
 	defer ex.Unlock()
 
-	order := DutchOrder{
-		InitialPrice:  dto.InitialPrice.Val,
-		MinPrice:      dto.MinPrice.Val,
-		MaxPrice:      dto.MaxPrice.Val,
-		StartTime:     time.Now(),
-		DecayDuration: time.Hour,
+	order := ExclusiveDutchOrder{
+		InitialPrice: dto.InitialPrice.Val,
+		MinPrice:     dto.MinPrice.Val,
+		MaxPrice:     dto.MaxPrice.Val,
+		StartTime:    time.Now(),
+		// DecayDuration: time.Hour,
 	}
 
 	ex.orders[id] = order
@@ -39,7 +39,7 @@ func (ex *Exchange) CreateOrder(ctx context.Context, id string, dto dto.CreateOr
 	return order, nil
 }
 
-func (ex *Exchange) GetOrder(ctx context.Context, orderId string) (DutchOrder, bool) {
+func (ex *Exchange) GetOrder(ctx context.Context, orderId string) (ExclusiveDutchOrder, bool) {
 	ex.RLock()
 	defer ex.RUnlock()
 

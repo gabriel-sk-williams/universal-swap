@@ -8,6 +8,7 @@ import (
 	"universal-swap/dto"
 	"universal-swap/network"
 
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/google/uuid"
 	"goyave.dev/goyave/v5"
 	"goyave.dev/goyave/v5/util/typeutil"
@@ -17,12 +18,14 @@ type Controller struct {
 	goyave.Component
 	EX *db.Exchange
 	MR *db.Merchant
+	CL *ethclient.Client
 }
 
-func NewController(server *goyave.Server, exchange *db.Exchange, merchant *db.Merchant) *Controller {
+func NewController(server *goyave.Server, exchange *db.Exchange, merchant *db.Merchant, client *ethclient.Client) *Controller {
 	ctrl := &Controller{
 		EX: exchange,
 		MR: merchant,
+		CL: client,
 	}
 	ctrl.Init(server)
 	return ctrl
@@ -30,6 +33,19 @@ func NewController(server *goyave.Server, exchange *db.Exchange, merchant *db.Me
 
 func (c *Controller) GetStatus(res *goyave.Response, req *goyave.Request) {
 	res.String(http.StatusOK, "Status OK")
+}
+
+// curl -X GET localhost:5000/block
+func (c *Controller) GetBlockTime(res *goyave.Response, req *goyave.Request) {
+	ctx := context.Background()
+	result, err := c.CL.BlockNumber(ctx)
+
+	if err == nil {
+		res.JSON(http.StatusOK, result)
+	} else {
+		res.Status(http.StatusInternalServerError)
+		res.Error(err)
+	}
 }
 
 // curl -X GET localhost:5000/order

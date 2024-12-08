@@ -5,19 +5,44 @@ import (
 	"time"
 )
 
-type DutchOrder struct {
-	InitialPrice  float64
-	MinPrice      float64
-	MaxPrice      float64
-	StartTime     time.Time
-	DecayDuration time.Duration
+// https://github.com/Uniswap/UniswapX/blob/main/src/lib/ExclusiveDutchOrderLib.sol
+
+/*
+struct ExclusiveDutchOrder {
+    // generic order information
+    OrderInfo info;
+    // The time at which the DutchOutputs start decaying
+    uint256 decayStartTime;
+    // The time at which price becomes static
+    uint256 decayEndTime;
+    // The address who has exclusive rights to the order until decayStartTime
+    address exclusiveFiller;
+    // The amount in bps that a non-exclusive filler needs to improve the outputs by to be able to fill the order
+    uint256 exclusivityOverrideBps;
+    // The tokens that the swapper will provide when settling the order
+    DutchInput input;
+    // The tokens that must be received to satisfy the order
+    DutchOutput[] outputs;
+}
+*/
+
+type ExclusiveDutchOrder struct {
+	InitialPrice float64
+	MinPrice     float64
+	MaxPrice     float64
+	StartTime    time.Time
+
+	DecayStartTime time.Duration
+	DecayEndTime   time.Duration
 }
 
 // LinearPriceDecay calculates price using linear decay
 // currentPrice := order.LinearPriceDecay(time.Now().Add(30 * time.Minute))
-func (do *DutchOrder) LinearPriceDecay(currentTime time.Time) float64 {
+func (do *ExclusiveDutchOrder) LinearPriceDecay(currentTime time.Time) float64 {
 	// Calculate time elapsed
 	timeElapsed := currentTime.Sub(do.StartTime)
+
+	decayDuration := do.DecayEndTime - do.DecayStartTime
 
 	// Prevent negative time
 	if timeElapsed < 0 {
@@ -25,7 +50,7 @@ func (do *DutchOrder) LinearPriceDecay(currentTime time.Time) float64 {
 	}
 
 	// Prevent exceeding decay duration
-	if timeElapsed > do.DecayDuration {
+	if timeElapsed > decayDuration {
 		return do.MinPrice
 	}
 
@@ -33,7 +58,7 @@ func (do *DutchOrder) LinearPriceDecay(currentTime time.Time) float64 {
 	totalPriceDrop := do.InitialPrice - do.MinPrice
 
 	// Calculate current price drop based on elapsed time
-	currentPriceDrop := (float64(timeElapsed) / float64(do.DecayDuration)) * totalPriceDrop
+	currentPriceDrop := (float64(timeElapsed) / float64(decayDuration)) * totalPriceDrop
 
 	// Calculate current price
 	currentPrice := do.InitialPrice - currentPriceDrop
@@ -48,7 +73,7 @@ func (do *DutchOrder) LinearPriceDecay(currentTime time.Time) float64 {
 
 // ExponentialPriceDecay calculates price using exponential decay
 // exponentialPrice := order.ExponentialPriceDecay(time.Now().Add(30*time.Minute), 0.001)
-func (do *DutchOrder) ExponentialPriceDecay(currentTime time.Time, decayRate float64) float64 {
+func (do *ExclusiveDutchOrder) ExponentialPriceDecay(currentTime time.Time, decayRate float64) float64 {
 	timeElapsed := currentTime.Sub(do.StartTime).Seconds()
 
 	// Exponential decay formula
