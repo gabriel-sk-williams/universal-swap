@@ -14,6 +14,7 @@ type DutchOrder struct {
 }
 
 // LinearPriceDecay calculates price using linear decay
+// currentPrice := order.LinearPriceDecay(time.Now().Add(30 * time.Minute))
 func (do *DutchOrder) LinearPriceDecay(currentTime time.Time) float64 {
 	// Calculate time elapsed
 	timeElapsed := currentTime.Sub(do.StartTime)
@@ -46,6 +47,7 @@ func (do *DutchOrder) LinearPriceDecay(currentTime time.Time) float64 {
 }
 
 // ExponentialPriceDecay calculates price using exponential decay
+// exponentialPrice := order.ExponentialPriceDecay(time.Now().Add(30*time.Minute), 0.001)
 func (do *DutchOrder) ExponentialPriceDecay(currentTime time.Time, decayRate float64) float64 {
 	timeElapsed := currentTime.Sub(do.StartTime).Seconds()
 

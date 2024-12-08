@@ -16,7 +16,8 @@ func Register(server *goyave.Server, router *goyave.Router) {
 	env := "local"
 	fmt.Printf("Environment: %s", env)
 
-	orderBook := db.NewOrderBook()
+	orderBook := db.NewExchange()
+	merchant := db.NewMerchant()
 
 	{
 		corsOptions := cors.Default()
@@ -27,16 +28,23 @@ func Register(server *goyave.Server, router *goyave.Router) {
 		router.CORS(corsOptions)
 		router.GlobalMiddleware(&parse.Middleware{})
 
-		ctrl := controller.NewController(server, orderBook) // driver
+		ctrl := controller.NewController(server, orderBook, merchant)
 
-		// UNPROTECTED STATUS ROUTES
+		// UNPROTECTED ROUTES
 		router.Get("/", Greeting)
 		router.Get("/status", ctrl.GetStatus)
 
+		// EXCHANGE ROUTES
 		router.Get("/order", ctrl.ListOrders)
 		router.Post("/order", ctrl.CreateOrder)
 		router.Get("/order/{orderId}", ctrl.GetOrder)
 		router.Delete("/order/{orderId}", ctrl.DeleteOrder)
+
+		// MERCHANT ROUTES
+		router.Post("/fill/{orderId}", ctrl.FillOrder)
+
+		router.Post("/mint", ctrl.MintTokens)
+		router.Post("/burn", ctrl.BurnTokens)
 	}
 }
 
