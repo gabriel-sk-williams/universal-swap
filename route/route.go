@@ -19,7 +19,6 @@ func Register(server *goyave.Server, router *goyave.Router) {
 	fmt.Printf("Environment: %s", env)
 
 	orderBook := db.NewExchange()
-	merchant := db.NewMerchant()
 	client := dialClient()
 
 	{
@@ -31,7 +30,7 @@ func Register(server *goyave.Server, router *goyave.Router) {
 		router.CORS(corsOptions)
 		router.GlobalMiddleware(&parse.Middleware{})
 
-		ctrl := controller.NewController(server, orderBook, merchant, client)
+		ctrl := controller.NewController(server, orderBook, client)
 
 		// UNPROTECTED ROUTES
 		router.Get("/", Greeting)
@@ -40,12 +39,9 @@ func Register(server *goyave.Server, router *goyave.Router) {
 		router.Get("/order", ctrl.ListOrders)
 		router.Post("/order", ctrl.CreateOrder)
 		router.Get("/order/{orderId}", ctrl.GetOrder)
-		router.Delete("/order/{orderId}", ctrl.DeleteOrder)
-
-		router.Get("/permit/{orderId}", ctrl.GetPermitByOrderId)
-
 		router.Post("/fill/{orderId}", ctrl.FillOrder)
-
+		router.Delete("/order/{orderId}", ctrl.DeleteOrder)
+		router.Get("/permit/{orderId}", ctrl.GetPermitByOrderId)
 	}
 }
 
@@ -59,5 +55,5 @@ func dialClient() *ethclient.Client {
 
 // curl http://localhost:5000
 func Greeting(res *goyave.Response, req *goyave.Request) {
-	res.String(http.StatusOK, "Oh? A fellow swapper!?")
+	res.String(http.StatusOK, "Oh? A fellow coin swapper!?")
 }

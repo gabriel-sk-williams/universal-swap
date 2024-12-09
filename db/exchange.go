@@ -95,7 +95,6 @@ func (ex *Exchange) GetPermit(ctx context.Context, orderId string) (Permit2, boo
 	return permit, exists
 }
 
-// curl -X GET localhost:5000/fill/3b20e878-922b-4458-9d4e-bee3eb5e5848
 func (ex *Exchange) FillOrder(ctx context.Context, orderId string, currentBlock uint64) error {
 	ex.RLock()
 	defer ex.RUnlock()

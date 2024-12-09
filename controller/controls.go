@@ -17,14 +17,12 @@ import (
 type Controller struct {
 	goyave.Component
 	EX *db.Exchange
-	MR *db.Merchant
 	CL *ethclient.Client
 }
 
-func NewController(server *goyave.Server, exchange *db.Exchange, merchant *db.Merchant, client *ethclient.Client) *Controller {
+func NewController(server *goyave.Server, exchange *db.Exchange, client *ethclient.Client) *Controller {
 	ctrl := &Controller{
 		EX: exchange,
-		MR: merchant,
 		CL: client,
 	}
 	ctrl.Init(server)
@@ -45,10 +43,7 @@ func (c *Controller) ListOrders(res *goyave.Response, req *goyave.Request) {
 	}
 }
 
-/*
-curl -X POST http://localhost:5000/order -H "Content-Type: application/json" -d "{\"Token\": \"BTC\", \"TokenAmount\": 0.64, \"DecayOffset\": 0, \"DecayDuration\": 300, \"SwapToken\": \"USDC\", \"InitialPrice\": 120.00, \"MinPrice\": 110.00}"
-*/
-
+// curl -X POST http://localhost:5000/order -H "Content-Type: application/json" -d "{\"Token\": \"BTC\", \"TokenAmount\": 0.0064, \"DecayOffset\": 0, \"DecayDuration\": 300, \"SwapToken\": \"USDC\", \"InitialPrice\": 636.00, \"MinPrice\": 600.00}"
 func (c *Controller) CreateOrder(res *goyave.Response, req *goyave.Request) {
 	ctx := context.Background()
 
@@ -63,9 +58,6 @@ func (c *Controller) CreateOrder(res *goyave.Response, req *goyave.Request) {
 	currentBlock, err := c.CL.BlockNumber(ctx)
 	check(err)
 
-	fmt.Println()
-	fmt.Println("Current Block:", currentBlock)
-
 	// Create the order
 	order, err := c.EX.CreateOrder(ctx, dto, currentBlock, userAddress)
 	check(err)
@@ -73,19 +65,22 @@ func (c *Controller) CreateOrder(res *goyave.Response, req *goyave.Request) {
 	fmt.Println()
 	fmt.Printf("New order posted from wallet address: %s \n", userAddress)
 
-	// convert the order to byte array
+	// Convert the order to byte array
 	orderBytes, err := json.Marshal(order)
 	if err != nil {
 		res.Status(http.StatusInternalServerError)
 		res.Error(err)
 	}
 
+	// Use the randomly generated private key to sign the order
 	signature, err := network.SignOrder(privateKey, orderBytes)
 	check(err)
 
+	// Build our params for interaction with the UniswapX Permit2 contract
 	permit, err := db.BuildPermit2Message(dto, currentBlock, userAddress, signature)
 	check(err)
 
+	// Simulate sending the permit
 	err = c.EX.SendPermit(order.Info.ID, permit)
 	check(err)
 
@@ -112,7 +107,26 @@ func (c *Controller) GetOrder(res *goyave.Response, req *goyave.Request) {
 	}
 }
 
-// curl -X POST localhost:5000/order/3b20e878-922b-4458-9d4e-bee3eb5e5848
+// curl -X POST localhost:5000/fill/0d191cb2-5594-4dcc-aa5e-bd42334739f6
+func (c *Controller) FillOrder(res *goyave.Response, req *goyave.Request) {
+	ctx := context.Background()
+
+	// Get current block time
+	currentBlock, err := c.CL.BlockNumber(ctx)
+	check(err)
+
+	orderId := req.RouteParams["orderId"]
+	err = c.EX.FillOrder(ctx, orderId, currentBlock)
+
+	if err == nil {
+		res.JSON(http.StatusOK, fmt.Sprintf("Filled order: %s", orderId))
+	} else {
+		res.Status(http.StatusInternalServerError)
+		res.Error(err)
+	}
+}
+
+// curl -X DELETE localhost:5000/order/3b20e878-922b-4458-9d4e-bee3eb5e5848
 func (c *Controller) DeleteOrder(res *goyave.Response, req *goyave.Request) {
 	ctx := context.Background()
 
@@ -133,7 +147,7 @@ func (c *Controller) DeleteOrder(res *goyave.Response, req *goyave.Request) {
 	}
 }
 
-// curl localhost:5000/permit/3b20e878-922b-4458-9d4e-bee3eb5e5848
+// curl localhost:5000/permit/0d191cb2-5594-4dcc-aa5e-bd42334739f6
 func (c *Controller) GetPermitByOrderId(res *goyave.Response, req *goyave.Request) {
 	ctx := context.Background()
 
@@ -145,30 +159,5 @@ func (c *Controller) GetPermitByOrderId(res *goyave.Response, req *goyave.Reques
 	} else {
 		res.Status(http.StatusNotFound)
 		res.Error(exists)
-	}
-}
-
-// curl -X POST localhost:5000/fill/50b82a95-a6bb-47ce-979c-2d2443f39971
-func (c *Controller) FillOrder(res *goyave.Response, req *goyave.Request) {
-	ctx := context.Background()
-
-	// Get current block time
-	currentBlock, err := c.CL.BlockNumber(ctx)
-	check(err)
-
-	fmt.Println()
-	fmt.Println("Current Block:", currentBlock)
-
-	// 23470069
-	// 23470076
-
-	orderId := req.RouteParams["orderId"]
-	err = c.EX.FillOrder(ctx, orderId, currentBlock)
-
-	if err == nil {
-		res.JSON(http.StatusOK, fmt.Sprintf("Filled order: %s", orderId))
-	} else {
-		res.Status(http.StatusInternalServerError)
-		res.Error(err)
 	}
 }

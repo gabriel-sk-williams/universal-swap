@@ -46,6 +46,8 @@ type DutchOutput struct {
 // currentPrice := order.LinearPriceDecay(time.Now().Add(30 * time.Minute))
 func (do *ExclusiveDutchOrder) LinearPriceDecay(currentBlock uint64) float64 {
 
+	fmt.Println()
+	fmt.Println("Current Block:", currentBlock)
 	fmt.Println("Decay Start:", do.DecayStartTime)
 	fmt.Println("Decay End:", do.DecayEndTime)
 	fmt.Println("Decay Deadline:", do.Info.Deadline)
