@@ -2,6 +2,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"universal-swap/db"
@@ -9,7 +10,6 @@ import (
 	"universal-swap/network"
 
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/google/uuid"
 	"goyave.dev/goyave/v5"
 	"goyave.dev/goyave/v5/util/typeutil"
 )
@@ -31,23 +31,6 @@ func NewController(server *goyave.Server, exchange *db.Exchange, merchant *db.Me
 	return ctrl
 }
 
-func (c *Controller) GetStatus(res *goyave.Response, req *goyave.Request) {
-	res.String(http.StatusOK, "Status OK")
-}
-
-// curl -X GET localhost:5000/block
-func (c *Controller) GetBlockTime(res *goyave.Response, req *goyave.Request) {
-	ctx := context.Background()
-	result, err := c.CL.BlockNumber(ctx)
-
-	if err == nil {
-		res.JSON(http.StatusOK, result)
-	} else {
-		res.Status(http.StatusInternalServerError)
-		res.Error(err)
-	}
-}
-
 // curl -X GET localhost:5000/order
 func (c *Controller) ListOrders(res *goyave.Response, req *goyave.Request) {
 	ctx := context.Background()
@@ -63,25 +46,48 @@ func (c *Controller) ListOrders(res *goyave.Response, req *goyave.Request) {
 }
 
 /*
-curl -X POST http://localhost:5000/order -H "Content-Type: application/json" -d "{\"InitialPrice\": 100.00, \"MaxPrice\": 120.00, \"MinPrice\": 80.00}"
+curl -X POST http://localhost:5000/order -H "Content-Type: application/json" -d "{\"Token\": \"BTC\", \"TokenAmount\": 0.64, \"DecayOffset\": 0, \"DecayDuration\": 300, \"SwapToken\": \"USDC\", \"InitialPrice\": 120.00, \"MinPrice\": 110.00}"
 */
 
 func (c *Controller) CreateOrder(res *goyave.Response, req *goyave.Request) {
 	ctx := context.Background()
 
+	// Simulate the components needed to build the Order and sign
+	privateKey, userAddress := network.GenerateUser()
+
+	// Receive and convert json from frontend into out Data Transfer Object
 	dto, err := typeutil.Convert[dto.CreateOrder](req.Data)
 	check(err)
 
-	id := uuid.New().String()[:8] // shortened uuid for readability
-	order, err := c.EX.CreateOrder(ctx, id, dto)
-
-	// generates a random user to sign the order and derive a wallet address
-	signature, publicKey, err := network.SignOrder("Hello!")
-	ethereumAddress := network.PublicKeyToEthereumAddress(publicKey)
+	// Get current block time
+	currentBlock, err := c.CL.BlockNumber(ctx)
+	check(err)
 
 	fmt.Println()
-	fmt.Printf("New order posted from wallet address %s \n", ethereumAddress)
-	fmt.Printf("Signature: %s \n", signature)
+	fmt.Println("Current Block:", currentBlock)
+
+	// Create the order
+	order, err := c.EX.CreateOrder(ctx, dto, currentBlock, userAddress)
+	check(err)
+
+	fmt.Println()
+	fmt.Printf("New order posted from wallet address: %s \n", userAddress)
+
+	// convert the order to byte array
+	orderBytes, err := json.Marshal(order)
+	if err != nil {
+		res.Status(http.StatusInternalServerError)
+		res.Error(err)
+	}
+
+	signature, err := network.SignOrder(privateKey, orderBytes)
+	check(err)
+
+	permit, err := db.BuildPermit2Message(dto, currentBlock, userAddress, signature)
+	check(err)
+
+	err = c.EX.SendPermit(order.Info.ID, permit)
+	check(err)
 
 	if err == nil {
 		res.JSON(http.StatusCreated, order)
@@ -91,7 +97,7 @@ func (c *Controller) CreateOrder(res *goyave.Response, req *goyave.Request) {
 	}
 }
 
-// curl localhost:5000/order/3b20e878-922b-4458-9d4e-bee3eb5e5848
+// curl localhost:5000/order/aa44c41d-0bd2-4baf-a587-11f984f6910b
 func (c *Controller) GetOrder(res *goyave.Response, req *goyave.Request) {
 	ctx := context.Background()
 
@@ -112,6 +118,12 @@ func (c *Controller) DeleteOrder(res *goyave.Response, req *goyave.Request) {
 
 	orderId := req.RouteParams["orderId"]
 	err := c.EX.DeleteOrder(ctx, orderId)
+	if err != nil {
+		res.Status(http.StatusInternalServerError)
+		res.Error(err)
+	}
+
+	err = c.EX.DeletePermit(ctx, orderId)
 
 	if err == nil {
 		res.JSON(http.StatusOK, fmt.Sprintf("Deleted order: %s", orderId))
@@ -121,47 +133,40 @@ func (c *Controller) DeleteOrder(res *goyave.Response, req *goyave.Request) {
 	}
 }
 
-// curl -X GET localhost:5000/fill/3b20e878-922b-4458-9d4e-bee3eb5e5848
-func (c *Controller) FillOrder(res *goyave.Response, req *goyave.Request) {
+// curl localhost:5000/permit/3b20e878-922b-4458-9d4e-bee3eb5e5848
+func (c *Controller) GetPermitByOrderId(res *goyave.Response, req *goyave.Request) {
 	ctx := context.Background()
 
 	orderId := req.RouteParams["orderId"]
-	err := c.MR.FillOrder(ctx, orderId)
+	result, exists := c.EX.GetPermit(ctx, orderId)
+
+	if exists {
+		res.JSON(http.StatusOK, result)
+	} else {
+		res.Status(http.StatusNotFound)
+		res.Error(exists)
+	}
+}
+
+// curl -X POST localhost:5000/fill/50b82a95-a6bb-47ce-979c-2d2443f39971
+func (c *Controller) FillOrder(res *goyave.Response, req *goyave.Request) {
+	ctx := context.Background()
+
+	// Get current block time
+	currentBlock, err := c.CL.BlockNumber(ctx)
+	check(err)
+
+	fmt.Println()
+	fmt.Println("Current Block:", currentBlock)
+
+	// 23470069
+	// 23470076
+
+	orderId := req.RouteParams["orderId"]
+	err = c.EX.FillOrder(ctx, orderId, currentBlock)
 
 	if err == nil {
 		res.JSON(http.StatusOK, fmt.Sprintf("Filled order: %s", orderId))
-	} else {
-		res.Status(http.StatusInternalServerError)
-		res.Error(err)
-	}
-}
-
-func (c *Controller) MintTokens(res *goyave.Response, req *goyave.Request) {
-	ctx := context.Background()
-
-	dto, err := typeutil.Convert[dto.MintTokens](req.Data)
-	check(err)
-
-	err = c.MR.MintTokens(ctx, dto)
-
-	if err == nil {
-		res.JSON(http.StatusOK, err)
-	} else {
-		res.Status(http.StatusInternalServerError)
-		res.Error(err)
-	}
-}
-
-func (c *Controller) BurnTokens(res *goyave.Response, req *goyave.Request) {
-	ctx := context.Background()
-
-	dto, err := typeutil.Convert[dto.BurnTokens](req.Data)
-	check(err)
-
-	err = c.MR.BurnTokens(ctx, dto)
-
-	if err == nil {
-		res.JSON(http.StatusOK, err)
 	} else {
 		res.Status(http.StatusInternalServerError)
 		res.Error(err)

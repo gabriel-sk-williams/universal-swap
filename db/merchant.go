@@ -25,16 +25,16 @@ type UniversalToken struct {
 }
 
 type Assets struct {
-	BTC  float64
-	SOL  float64
-	XRP  float64
-	DOGE float64
-	DOT  float64
-	NEAR float64
-	LTC  float64
-	ADA  float64
-	BCH  float64
-	ALGO float64
+	BTC  float64 `json:"btc"`
+	SOL  float64 `json:"sol"`
+	XRP  float64 `json:"xrp"`
+	DOGE float64 `json:"doge"`
+	DOT  float64 `json:"dot"`
+	NEAR float64 `json:"near"`
+	LTC  float64 `json:"ltc"`
+	ADA  float64 `json:"ada"`
+	BCH  float64 `json:"bch"`
+	ALGO float64 `json:"algo"`
 }
 
 func NewMerchant() *Merchant {
@@ -54,22 +54,11 @@ func NewMerchant() *Merchant {
 	}
 }
 
-/*
-Sequences of events for issuance of Universal token
-
-
-
-*/
-
-// curl -X GET localhost:5000/fill/3b20e878-922b-4458-9d4e-bee3eb5e5848
-func (mr *Merchant) FillOrder(ctx context.Context, orderId string) error {
-	mr.RLock()
-	defer mr.RUnlock()
-
-	// token, exists := mr.tokens[orderId]
-
-	return nil
+func (mr *Merchant) ListAssets(ctx context.Context) (Assets, error) {
+	return mr.Assets, nil
 }
+
+// Sequences of events for issuance of Universal token
 
 // 1. The merchant initiates the issuance process by sending a transaction to the token contract.
 // This transaction signals the merchant's intent to send underlying assets equivalent to

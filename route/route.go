@@ -35,7 +35,6 @@ func Register(server *goyave.Server, router *goyave.Router) {
 
 		// UNPROTECTED ROUTES
 		router.Get("/", Greeting)
-		router.Get("/status", ctrl.GetStatus)
 
 		// EXCHANGE ROUTES
 		router.Get("/order", ctrl.ListOrders)
@@ -43,13 +42,10 @@ func Register(server *goyave.Server, router *goyave.Router) {
 		router.Get("/order/{orderId}", ctrl.GetOrder)
 		router.Delete("/order/{orderId}", ctrl.DeleteOrder)
 
-		// MERCHANT ROUTES
+		router.Get("/permit/{orderId}", ctrl.GetPermitByOrderId)
+
 		router.Post("/fill/{orderId}", ctrl.FillOrder)
 
-		router.Post("/mint", ctrl.MintTokens)
-		router.Post("/burn", ctrl.BurnTokens)
-
-		router.Get("/block", ctrl.GetBlockTime)
 	}
 }
 
