@@ -106,6 +106,7 @@ func (ex *Exchange) FillOrder(ctx context.Context, orderId string, currentBlock 
 	}
 
 	currentPrice := order.LinearPriceDecay(currentBlock)
+
 	fmt.Println()
 	fmt.Printf("Order %s fulfilled: \n", orderId)
 	fmt.Printf("%f %s swapped at price: %f %s \n", order.Input.Amount, order.Input.Token, currentPrice, order.Output.Token)
