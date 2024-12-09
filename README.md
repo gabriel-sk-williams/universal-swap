@@ -11,7 +11,7 @@ When calling `FillOrder` the server simulates a Universal Authorized Merchant fu
 
 This server uses Go version 1.22.5
 
-Run `go run main.go` in your project's directory to start the server. The results of server interactions will print to the terminal; or open your browser to `http://localhost:5000`.
+Enter `go run .` or `go run main.go` in the project's directory to start the server. The results of server interactions will print to the terminal. You can also open your browser to `http://localhost:5000`.
 
 The available routes are as follows:
 ```go
@@ -36,7 +36,7 @@ curl -X POST http://localhost:5000/order -H "Content-Type: application/json" -d 
 
 Linux:
 ```
-curl -X POST http://localhost:5000/order -H "Content-Type: application/json" -d "{"Token": "BTC", "TokenAmount": 0.0064, "DecayOffset": 0, "DecayDuration": 300, "SwapToken": "USDC", "InitialPrice": 636.00, "MinPrice": 600.00}"
+curl -X POST http://localhost:5000/order -H "Content-Type: application/json" -d '{"Token": "BTC", "TokenAmount": 0.0064, "DecayOffset": 0, "DecayDuration": 300, "SwapToken": "USDC", "InitialPrice": 636.00, "MinPrice": 600.00}'
 ```
 
 ### Directory structure
