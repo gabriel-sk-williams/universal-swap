@@ -27,7 +27,7 @@ router.Get("/permit/{orderId}", ctrl.GetPermitByOrderId)
 
 There is no frontend for this application.
 
-To start, I recommend placing an initial Order to the server:
+To start, I recommend sending an Order to the server:
 
 Windows:
 ```
@@ -37,6 +37,17 @@ curl -X POST http://localhost:5000/order -H "Content-Type: application/json" -d 
 Linux:
 ```
 curl -X POST http://localhost:5000/order -H "Content-Type: application/json" -d '{"Token": "BTC", "TokenAmount": 0.0064, "DecayOffset": 0, "DecayDuration": 300, "SwapToken": "USDC", "InitialPrice": 636.00, "MinPrice": 600.00}'
+```
+
+Placing the Order will store it in memory and make it accessible with a GET to `/order` or `order/{orderId}`. To fill the order, copy the id from the order and use it in your POST to `/fill{orderId}`, e.g.:
+
+`curl -X GET http://localhost:5000/order/b3b0bd43-d7ba-47a8-8b4d-91fc058cc9e2`
+
+The server will calculate the amount of price decay for the Order, based on the decay parameters specified for the Order and the number of blocks that have elapsed on the Base L2. You should receive a confirmation on the server terminal.
+
+```
+Order b3b0bd43-d7ba-47a8-8b4d-91fc058cc9e2 fulfilled:
+0.006400 BTC swapped at price: 613.680000 USDC
 ```
 
 ### Directory structure

@@ -64,6 +64,8 @@ func (c *Controller) CreateOrder(res *goyave.Response, req *goyave.Request) {
 
 	fmt.Println()
 	fmt.Printf("New order posted from wallet address: %s \n", userAddress)
+	fmt.Printf("Token: %f %s", order.Input.Amount, order.Input.Token)
+	fmt.Printf("Swap: %f->%f %s", order.Output.StartAmount, order.Output.EndAmount, order.Output.Token)
 
 	// Convert the order to byte array
 	orderBytes, err := json.Marshal(order)
