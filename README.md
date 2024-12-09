@@ -78,7 +78,7 @@ Order b3b0bd43-d7ba-47a8-8b4d-91fc058cc9e2 fulfilled:
 
 ### Concluding Thoughts
 
-I would have liked to give more attention to uAssets and the Universal Merchant. In early iterations I included a "Merchant" struct in the controller who would hold mock crypto assets, use them to mint and burn Universal Tokens, and provide liquidity to the Exchange. However, since most of these actions would be occurring on-chain (and therefore off-server), the best I could have done is mock up a controlled entity that 1) does not technically use my routes and 2) is not actually subject to on-chain limitations
+I would have liked to give more attention to uAssets and the Universal Merchant. In early iterations I included a "Merchant" struct in the controller that would hold mock crypto assets, use them to mint and burn Universal Tokens, and provide liquidity to the Exchange. However, since most of these actions would be occurring on-chain (and therefore off-server), the best I could have done is mock up a controlled entity that 1) would not technically be using my routes and 2) is not actually subject to on-chain limitations.
 
 Instead I decided to focus on preparing frontend requests for eventual use on-chain. The bulk of my efforts went therefore into configuring and signing Dutch Orders that would interact with the UniswapX DutchReactor and Permit2 Solidity contracts:
 
